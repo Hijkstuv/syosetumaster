@@ -32,7 +32,7 @@ You can create new Syosetu instance
 ```
 master.create_new_syosetu(
   syosetu_title = TITLE_OF_THE_SYOSETU    # not important. just for file I/O and classification
-  syosetu_id = ID_OF_THE_SYOSETU      # e.g. n2267be -> read https://ncode.syosetu.com/n2267be/(episode_id) pages
+  syosetu_id = ID_OF_THE_SYOSETU      # e.g. "n2267be" -> read https://ncode.syosetu.com/n2267be/(episode_id) pages
   source_lang = "Japanese"       # trivialy, only "Japanese" works now... implemented for scalability
   target_lang = TARGET_LANGUAGE  # be careful: don't use language code, you should put whole language name e.g. EN(X) English(O)
 )
