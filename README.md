@@ -37,3 +37,14 @@ master.create_new_syosetu_s(
   LIST_OF_ARGUMENTS  # : list[dict[str, str]]  e.g. [{"syosetu_title": "title_1", "syosetu_id": "id_1", ..}, ...]
 )
 ```
+
+These are automatically append to .syosetu_list :
+```
+master.syosetu_list    # -> list[Syosetu]
+```
+
+and you can save and load this list :
+```
+master.save_syosetu_list()
+master.load_syosetu_list()
+```
