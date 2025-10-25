@@ -64,19 +64,16 @@ def consistancy_messages(
     
     return messages(
         system_content = (
-            'You are an expert in key word extraction. You will get '
-            f'{source_lang} text. Your goal is to extract only the expressions '
-            'that require translation consistency across chapters, such as : \n'
-            '- Names of character, place, organization, items, abilities or spells.\n'
-            '- Uncommon idiomatic or figurative expressions.\n'
-            '- Repeatedly used phrases.\n'
-            '- '
-            'Strictly follow these rules : \n'
-            '- Extract ONLY terms that are crucial for maintaining translation consistency.\n'
-            '- Do not add any explanations, annotations, or meanings.\n'
-            '- Keep each terms exactly as written in the text.\n'
-            '- Return the extracted word list only.\n'
-            'Do not ask to do or not, just do.'
+f'''You are an expert in key word extraction. You will get {source_lang} text.
+Your goal is to extract only the expressions that require translation consistency across chapters, such as :
+- Names of character, place, organization, items, abilities or spells.
+- Uncommon idiomatic or figurative expressions.
+- Repeatedly used phrases.
+Strictly follow these rules :
+- Extract ONLY terms that are crucial for maintaining translation consistency.
+- Do not add any explanations, annotations, or meanings.
+- Keep each terms exactly as written in the text.
+- Return the extracted word list only.'''
         ),
         user_content = text
     )
@@ -87,19 +84,26 @@ def glossary_messages(
     target_lang: str,
     word_list: list[str]
 ) -> list[dict[str, str]]:
-    """ return input list for glossary process.
+    """ return input list for glossary process. 
     """
     
     return messages(
         system_content = (
-            'You are a professional translator specialized in '
-            f'{source_lang}-to-{target_lang} literary translation.'
-            f'Translate each of the following {source_lang} terms into '
-            f'natural {target_lang} terms. Strictly follow these rules : '
-            '- If a term is written as [Kanji](Reading) (e.g. 散弾銃(ショットガン)), '
-            'ignore the Kanji part and base the translation only on the Reading.\n'
-            '- Do NOT include any explanations, examples, or notes.\n'
-            '- Output only the translated expressions, maintaining order.'
+f'''You are a professional translator specialized in {source_lang}-to-{target_lang} literary translation.
+Translate each of the following {source_lang} terms into natural {target_lang} terms.
+Translation policy
+1. Proper names or unique entities (characters, places, organizations, techniques, etc.):
+- Transliterate their pronunciation naturally into Korean. e.g. "天狐" -> "천호", "誓約の魔物": "서약의 마물" 
+- If a term is written as [Kanji](Reading), ignore the Kanji part and base the transliteration only on the Reading. e.g. "散弾銃(ショットガン)" -> "샷건"
+2. Common nouns, idioms, or regular expressions:
+- Translate their meaning into natural Korean.
+- Example: "我は綴る" -> "나는 쓰노라"
+3. Mixed or ambiguous cases
+- If a term could be both, prefer the transliteration style (treat as a name).
+- Example: "グラム" -> "그람"
+Strictly follow these rules : 
+- Do NOT include any explanations, examples, or notes. Output only the translated expressions, maintaining order.
+- Do not include Kanji or {source_lang} text in the output. Make sure the translation is completed.'''
         ),
         user_content = str(word_list)
     )
@@ -118,17 +122,23 @@ def translate_messages(
     
     return messages(
         system_content = (
-           'You are a professional translator who specialized in '
-           f'{source_lang}-to-{target_lang} translation. '
-           'You will be given title and text. Translate these in natural and '
-           f'fluent  {target_lang}. '
-           'Preserve punctuation marks as much as possible.\n'
-           'Refer to the provided glossary and use the specified translations '
-           'whenever the corresponding terms appear.\n'
-           'glossary : '
-        ) + str(glossary) + (
-            'Do not ask to do or not, just do.'
-        ),
+f'''You are a professional translator who specialized in {source_lang}-to-{target_lang} translation.
+You will be given title and text. Translate these in natural and fluent {target_lang}.
+Translation policy
+1. Proper names or unique entities (characters, places, organizations, techniques, etc.):
+- Transliterate their pronunciation naturally into Korean. e.g. "天狐" -> "천호", "誓約の魔物": "서약의 마물" 
+- If a term is written as [Kanji](Reading), ignore the Kanji part and base the transliteration only on the Reading. e.g. "散弾銃(ショットガン)" -> "샷건"
+2. Common nouns, idioms, or regular expressions:
+- Translate their meaning into natural Korean.
+- Example: "我は綴る" -> "나는 쓰노라"
+3. Mixed or ambiguous cases
+- If a term could be both, prefer the transliteration style (treat as a name).
+- Example: "グラム" -> "그람"
+Strictly follow these rules : 
+Do not include Kanji or {source_lang} text in the output. Make sure the translation is completed.
+Refer to the provided glossary and use the specified translations whenever the corresponding terms appear.
+glossary : \n'''
+        ) + str(glossary),
         user_content = str(episode)
     )
 
