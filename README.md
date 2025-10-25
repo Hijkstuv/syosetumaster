@@ -18,8 +18,8 @@ SM.set_api_key("YOUR_API_KEY")
 
 and you can set directories.
 ```
-SM.set_base_dir("YOUR_BASE_DIR")      # files of syosetu data will saved at Base_DIR.
-SM.set_batch_dir("YOUR_BATCH_DIR")    # files of batches will saved at BATCH_DIR.
+SM.set_base_dir("YOUR_BASE_DIR")      # syosetu data files will saved at Base_DIR.
+SM.set_batch_dir("YOUR_BATCH_DIR")    # batch files will saved at BATCH_DIR.
 ```
 
 
