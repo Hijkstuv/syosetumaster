@@ -1,2 +1,2 @@
-from novelmaster import NovelMaster
-__all__ = "NovelMaster"
+from syosetumaster import SyosetuMaster
+__all__ = "SyosetuMaster"
