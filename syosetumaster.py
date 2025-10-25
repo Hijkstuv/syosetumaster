@@ -1,6 +1,6 @@
 from syosetu import Syosetu, PROG_STATUS, BASE_DIR
 from crawl import Crawler
-from translate_gpt_IO import Translate_GPT_IO as Client
+from translate_gpt_IO import Translate_GPT_IO as Client, set_api_key as _set_api_key
 from local import BaseLocal, normalize_brackets, split_list
 import os
 
@@ -37,13 +37,18 @@ def crawl_syosetu(syosetu: Syosetu) -> None:
     syosetu_id = syosetu.get_syosetu_id()
     episode_id_list = syosetu.get_episode_id_list()
     
+    
+    Crawler._open()
+
     if episode_id_list == []:
         episode_id = "1"
     else:
         episode_id = episode_id_list[-1]
         episode_id = Crawler.crawl_syosetu_episode(syosetu_id, episode_id)[1]
+    if episode_id == None:
+        Crawler._close()
+        return None
     
-    Crawler._open()
     
     while True:
         [
@@ -244,324 +249,6 @@ def _translate_batch_response(
 ########################################################################
 
 
-def consistancy_batches_request(syosetu: Syosetu) -> None:
-    """ request batches of consistancy process of the syosetu.
-    """
-    
-    client = Client()
-    
-    episode_id_list = syosetu.get_episode_id_list()
-    
-    for episode_id in episode_id_list:
-        status = syosetu.get_consistancy_status(episode_id)
-        if status == PROG_STATUS[0]:
-            _consistancy_batch_request(client, syosetu, episode_id)
-            print(
-                "request consi_" + syosetu.get_syosetu_title() 
-                + "_" + episode_id
-            )
-        elif status == PROG_STATUS[1]:
-            print(
-                "processing consi_" + syosetu.get_syosetu_title() 
-                + "_" + episode_id
-            )
-        elif status == PROG_STATUS[2]:
-            print(
-                "end consi_" + syosetu.get_syosetu_title() 
-                + "_" + episode_id
-            )
-    
-    client.close()
-    syosetu.save_if_modified()
-    return None
-
-
-def consistancy_batches_response(syosetu: Syosetu) -> bool:
-    """ 
-    retrieve batch responses of consistancy process of the syosetu.
-    if there is not-completed-batch, print 'not yet'.
-    return is_completed; all batches has completed, or made error.
-    """
-    
-    client = Client()
-    
-    episode_id_list = syosetu.get_episode_id_list()
-    
-    is_completed = True
-    for episode_id in episode_id_list:
-        if syosetu.get_consistancy_status(episode_id) == PROG_STATUS[1]:
-            batch_id = syosetu.get_consistancy_batch_id(episode_id)
-            status = client.batch_status(batch_id)
-            if status == "completed":
-                _consistancy_batch_response(client, syosetu, episode_id, batch_id)
-                print(
-                    "retrieve consi_" + syosetu.get_syosetu_title() 
-                    + "_" + episode_id
-                )
-            elif status == "finalizing":
-                is_completed = False
-                print(
-                    "finalize consi_" + syosetu.get_syosetu_title() 
-                    + "_" + episode_id
-                )
-            else:
-                is_completed = False
-                client.batch_cancel(batch_id)
-                _consistancy_batch_request(client, syosetu, episode_id)
-                print(
-                    "re-request consi_" + syosetu.get_syosetu_title() 
-                    + "_" + episode_id
-                )
-        elif syosetu.get_consistancy_status(episode_id) == PROG_STATUS[0]:
-            is_completed = False
-            print("request first")
-    
-    client.close()
-    syosetu.save_if_modified()
-    return is_completed
-
-    
-def glossary_batches_request(syosetu: Syosetu) -> None:
-    """ request batches of glossary process of the syosetu.
-    """
-    
-    client = Client()
-    
-    validated_keyword_list = syosetu.validated_new_word_list()
-    count = len(validated_keyword_list) / GLOSSARY_CHUNK_SIZE
-    split_keyword_list = split_list(validated_keyword_list, GLOSSARY_CHUNK_SIZE)
-    for keyword_list in split_keyword_list:
-        syosetu.append_keyword_list_list(keyword_list)
-    
-    for i in count:
-        syosetu.append_glossary_batch_info()
-    
-    for i in range(syosetu.get_glossary_batch_count()):
-        status = syosetu.get_glossary_status(i)
-        if status == PROG_STATUS[0]:
-            _glossary_batch_request(client, syosetu, i, split_keyword_list[i])
-            print(
-                "request gloss_" + syosetu.get_syosetu_title() 
-                + "_" + f"{i:2d}/{count:2d}"
-            )
-        elif status == PROG_STATUS[1]:
-            print(
-                "processing gloss_" + syosetu.get_syosetu_title() 
-                + "_" + f"{i:2d}/{count:2d}"
-            )
-        elif status == PROG_STATUS[2]:
-            print(
-                "end gloss_" + syosetu.get_syosetu_title() 
-                + "_" + f"{i:2d}/{count:2d}"
-            )
-    
-    client.close()
-    syosetu.clear_new_word_list()
-    syosetu.save_if_modified()
-    return None
-
-
-def glossary_batches_response(syosetu: Syosetu) -> bool:
-    """ 
-    retrieve batch responses of glossary process of the syosetu.
-    if there is not-completed-batch, re-request it.
-    return is_completed; all batches has completed, or made error.
-    """
-    
-    client = Client()
-    
-    count = syosetu.get_glossary_batch_count()
-    
-    is_completed = True
-    for i in range(count):
-        if syosetu.get_glossary_status(i) == PROG_STATUS[1]:
-            batch_id = syosetu.get_glossary_batch_id(i)
-            status = client.batch_status(batch_id)
-            if status == "completed":
-                _glossary_batch_response(client, syosetu, i, batch_id)
-                print(
-                    "retrieve gloss_" + syosetu.get_syosetu_title() 
-                    + "_" + f"{i:2d}/{count:2d}"
-                )
-            elif status == "finalizing":
-                is_completed = False
-                print(
-                    "finalize gloss_" + syosetu.get_syosetu_title() 
-                    + "_" + f"{i:2d}/{count:2d}"
-                )
-            else:
-                is_completed = False
-                client.batch_cancel(batch_id)
-                _glossary_batch_request(client, syosetu, i, batch_id)
-                print(
-                    "re-request gloss_" + syosetu.get_syosetu_title() 
-                    + "_" + f"{i:2d}/{count:2d}"
-                )
-        elif syosetu.get_glossary_status(i) == PROG_STATUS[0]:
-            is_completed = False
-            print(f"{i:2d}/{count:2d} : request first")
-        elif syosetu.get_glossary_status(i) == PROG_STATUS[2]:
-            print(f"{i:2d}/{count:2d} : completed")
-    
-    client.close()
-    if is_completed:
-        syosetu.set_new_word_list([])
-    syosetu.save_if_modified()
-    return is_completed
-
-
-def translate_batches_request(syosetu: Syosetu) -> None:
-    """ request batches of translate process of the syosetu.
-    """
-    
-    client = Client()
-    
-    episode_id_list = syosetu.get_episode_id_list()
-    
-    for episode_id in episode_id_list:
-        status = syosetu.get_translate_status(episode_id)
-        if status == PROG_STATUS[0]:
-            _translate_batch_request(client, syosetu, episode_id)
-            print(
-                "request trans_" + syosetu.get_syosetu_title() 
-                + "_" + episode_id
-            )
-        elif status == PROG_STATUS[1]:
-            print(
-                "processing trans_" + syosetu.get_syosetu_title() 
-                + "_" + episode_id
-            )
-        elif status == PROG_STATUS[2]:
-            print(
-                "end trans_" + syosetu.get_syosetu_title() 
-                + "_" + episode_id
-            )
-    
-    client.close()
-    syosetu.save_if_modified()
-    return None
-
-
-def translate_batches_response(syosetu: Syosetu) -> bool:
-    """ retrieve batch responses of translate process of the syosetu.
-    """
-    
-    client = Client()
-    
-    episode_id_list = syosetu.get_episode_id_list()
-    
-    is_completed = True
-    for episode_id in episode_id_list:
-        if syosetu.get_translate_status(episode_id) == PROG_STATUS[1]:
-            batch_id = syosetu.get_translate_batch_id(episode_id)
-            status = client.batch_status(batch_id)
-            if status == "completed":
-                _translate_batch_response(client, syosetu, episode_id, batch_id)
-                print(
-                    "retrieve trans_" + syosetu.get_syosetu_title() 
-                    + "_" + episode_id
-                )
-            elif status == "finalizing":
-                is_completed = False
-                print(
-                    "finalize trans_" + syosetu.get_syosetu_title() 
-                    + "_" + episode_id
-                )
-            else:
-                is_completed = False
-                client.batch_cancel(batch_id)
-                _translate_batch_request(client, syosetu, episode_id)
-                print(
-                    "re-request trans_" + syosetu.get_syosetu_title() 
-                    + "_" + episode_id
-                )
-        elif syosetu.get_translate_status(episode_id) == PROG_STATUS[0]:
-            is_completed = False
-            print("request first")
-    
-    client.close()
-    if is_completed:
-        syosetu.set_post_translate_status(PROG_STATUS[0])
-    syosetu.save_if_modified()
-    return is_completed
-
-
-def post_translate_batch_request(syosetu: Syosetu) -> None:
-    """ request batches of post-translate process of the syosetu.
-    """
-    
-    episode_id_list = syosetu.get_episode_id_list()
-    for episode_id in episode_id_list:
-        episode_data = syosetu.load_episode_data(
-            lang = syosetu.get_source_lang(),
-            episode_id = episode_id
-        )
-        if episode_data["chapter"] not in syosetu.get_chapter_list():
-            syosetu.append_chapter_list(episode_data["chapter"])
-    
-    if syosetu.get_chapter_list() == [""]:
-        syosetu.set_post_translate_status(PROG_STATUS[2])
-        print(syosetu.get_syosetu_title() + " passed post_trans")
-        return None
-    elif syosetu.get_post_translate_status() == PROG_STATUS[0]:
-        client = Client()
-        batch_id = client.glossary_batch_request(
-            source_lang = syosetu.get_source_lang(),
-            target_lang = syosetu.get_target_lang(),
-            word_list = syosetu.get_chapter_list(),
-            syosetu_title = syosetu.get_syosetu_title(),
-            episode_id = "post_translate"
-        )
-        syosetu.set_post_translate_batch_id(batch_id)
-        syosetu.set_post_translate_status(PROG_STATUS[1])
-        client.close()
-        print("request post_trans_" + syosetu.get_syosetu_title())
-    
-    syosetu.save_if_modified()
-    return None
-
-
-def post_translate_batch_response(syosetu: Syosetu) -> bool:
-    """ retrieve batches of post-translate process of the syosetu.
-    """
-    
-    is_completed = False
-    if syosetu.get_post_translate_status() == PROG_STATUS[0]:
-        print("request first")
-        return None
-    elif syosetu.get_post_translate_status() == PROG_STATUS[1]:
-        client = Client()
-        batch_id = syosetu.get_post_translate_batch_id()
-        status = client.batch_status(batch_id)
-        if status == "completed":
-            chapter_list = syosetu.get_chapter_list()
-            translated_chapter_list = client.glossary_batch_response(batch_id)
-            chapter_translate_dict = dict(zip(
-                chapter_list, translated_chapter_list
-            ))
-            
-            episode_id_list = syosetu.get_episode_id_list()
-            for episode_id in episode_id_list:
-                episode_data = syosetu.load_episode_data(
-                    lang = syosetu.get_target_lang(),
-                    episode_id = episode_id
-                )
-                chapter = episode_data["chapter"]
-                episode_data["chapter"] = chapter_translate_dict[chapter]
-                syosetu.save_episode_data(
-                    lang = syosetu.get_target_lang(),
-                    episode_id = episode_id,
-                    episode_data = episode_data
-                )
-            syosetu.set_post_translate_status(PROG_STATUS[2])
-            print("retrieve post_trans_" + syosetu.get_syosetu_title())
-            is_completed = True
-    elif syosetu.get_post_translate_status() == PROG_STATUS[2]:
-        print("end post_trans_" + syosetu.get_syosetu_title())
-        is_completed = True
-    
-    syosetu.save_if_modified()
-    return is_completed
 
 
 def export_episodes_txt(syosetu: Syosetu) -> None:
@@ -614,6 +301,14 @@ class SyosetuMaster():
         return None
     
     
+    def set_api_key(api_key: str) -> None:
+        """ set openai api_key.
+        """
+
+        _set_api_key(api_key)
+        return None
+    
+
     def client_open(self) -> None:
         """ open client.
         """
@@ -718,21 +413,7 @@ class SyosetuMaster():
         self.select_syosetu_list.append(syosetu)
         return None
     
-    
-    def pop_syosetu(self, syosetu: Syosetu) -> None:
-        """ pop syosetu from select_syosetu_list
-        """
-        
-        try:
-            self.select_syosetu_list.remove(syosetu)
-        except ValueError:
-            print("no such element")
-        return None
-    
-    
-    ##########################################################################
-    
-    
+
     def crawl_syosetsu(self, mode: str = "all") -> None:
         """ crawl the all syosetu syosetu episodes of all syosetu in syosetu_list.
         """
@@ -766,7 +447,9 @@ class SyosetuMaster():
     
     
     def clear_syosetu(self, mode: str = "all") -> None:
-        """ clear all syosetus in syosetu_list.
+        """
+        clear all syosetus in syosetu_list.
+        use only if the data has contamianated.
         """
         
         if mode == "all":
@@ -781,6 +464,312 @@ class SyosetuMaster():
         return None
     
     
+    ###################################################################################################
+    
+    
+    def consistancy_batches_request(self, syosetu: Syosetu) -> None:
+        """ request batches of consistancy process of the syosetu.
+        """
+                
+        episode_id_list = syosetu.get_episode_id_list()
+        
+        for episode_id in episode_id_list:
+            status = syosetu.get_consistancy_status(episode_id)
+            if status == PROG_STATUS[0]:
+                _consistancy_batch_request(self.client, syosetu, episode_id)
+                print(
+                    "request consi_" + syosetu.get_syosetu_title() 
+                    + "_" + episode_id
+                )
+            elif status == PROG_STATUS[1]:
+                print(
+                    "processing consi_" + syosetu.get_syosetu_title() 
+                    + "_" + episode_id
+                )
+            elif status == PROG_STATUS[2]:
+                print(
+                    "end consi_" + syosetu.get_syosetu_title() 
+                    + "_" + episode_id
+                )
+        
+        syosetu.save_if_modified()
+        return None
+
+
+    def consistancy_batches_response(self, syosetu: Syosetu) -> bool:
+        """ 
+        retrieve batch responses of consistancy process of the syosetu.
+        if there is not-completed-batch, print 'not yet'.
+        return is_completed; all batches has completed, or made error.
+        """
+                
+        episode_id_list = syosetu.get_episode_id_list()
+        
+        is_completed = True
+        for episode_id in episode_id_list:
+            if syosetu.get_consistancy_status(episode_id) == PROG_STATUS[1]:
+                batch_id = syosetu.get_consistancy_batch_id(episode_id)
+                status = self.client.batch_status(batch_id)
+                if status == "completed":
+                    _consistancy_batch_response(self.client, syosetu, episode_id, batch_id)
+                    print(
+                        "retrieve consi_" + syosetu.get_syosetu_title() 
+                        + "_" + episode_id
+                    )
+                elif status == "finalizing":
+                    is_completed = False
+                    print(
+                        "finalize consi_" + syosetu.get_syosetu_title() 
+                        + "_" + episode_id
+                    )
+                else:
+                    is_completed = False
+                    self.client.batch_cancel(batch_id)
+                    _consistancy_batch_request(self.client, syosetu, episode_id)
+                    print(
+                        "re-request consi_" + syosetu.get_syosetu_title() 
+                        + "_" + episode_id
+                    )
+            elif syosetu.get_consistancy_status(episode_id) == PROG_STATUS[0]:
+                is_completed = False
+                print("request first")
+        
+        self.client.close()
+        syosetu.save_if_modified()
+        return is_completed
+
+        
+    def glossary_batches_request(self, syosetu: Syosetu) -> None:
+        """ request batches of glossary process of the syosetu.
+        """
+                
+        validated_keyword_list = syosetu.validated_new_word_list()
+        count = len(validated_keyword_list) / GLOSSARY_CHUNK_SIZE
+        split_keyword_list = split_list(validated_keyword_list, GLOSSARY_CHUNK_SIZE)
+        for keyword_list in split_keyword_list:
+            syosetu.append_keyword_list_list(keyword_list)
+        
+        for i in count:
+            syosetu.append_glossary_batch_info()
+        
+        for i in range(syosetu.get_glossary_batch_count()):
+            status = syosetu.get_glossary_status(i)
+            if status == PROG_STATUS[0]:
+                _glossary_batch_request(self.client, syosetu, i, split_keyword_list[i])
+                print(
+                    "request gloss_" + syosetu.get_syosetu_title() 
+                    + "_" + f"{i:2d}/{count:2d}"
+                )
+            elif status == PROG_STATUS[1]:
+                print(
+                    "processing gloss_" + syosetu.get_syosetu_title() 
+                    + "_" + f"{i:2d}/{count:2d}"
+                )
+            elif status == PROG_STATUS[2]:
+                print(
+                    "end gloss_" + syosetu.get_syosetu_title() 
+                    + "_" + f"{i:2d}/{count:2d}"
+                )
+        
+        syosetu.clear_new_word_list()
+        syosetu.save_if_modified()
+        return None
+
+
+    def glossary_batches_response(self, syosetu: Syosetu) -> bool:
+        """ 
+        retrieve batch responses of glossary process of the syosetu.
+        if there is not-completed-batch, re-request it.
+        return is_completed; all batches has completed, or made error.
+        """
+                
+        count = syosetu.get_glossary_batch_count()
+        
+        is_completed = True
+        for i in range(count):
+            if syosetu.get_glossary_status(i) == PROG_STATUS[1]:
+                batch_id = syosetu.get_glossary_batch_id(i)
+                status = self.client.batch_status(batch_id)
+                if status == "completed":
+                    _glossary_batch_response(self.client, syosetu, i, batch_id)
+                    print(
+                        "retrieve gloss_" + syosetu.get_syosetu_title() 
+                        + "_" + f"{i:2d}/{count:2d}"
+                    )
+                elif status == "finalizing":
+                    is_completed = False
+                    print(
+                        "finalize gloss_" + syosetu.get_syosetu_title() 
+                        + "_" + f"{i:2d}/{count:2d}"
+                    )
+                else:
+                    is_completed = False
+                    self.client.batch_cancel(batch_id)
+                    _glossary_batch_request(self.client, syosetu, i, batch_id)
+                    print(
+                        "re-request gloss_" + syosetu.get_syosetu_title() 
+                        + "_" + f"{i:2d}/{count:2d}"
+                    )
+            elif syosetu.get_glossary_status(i) == PROG_STATUS[0]:
+                is_completed = False
+                print(f"{i:2d}/{count:2d} : request first")
+            elif syosetu.get_glossary_status(i) == PROG_STATUS[2]:
+                print(f"{i:2d}/{count:2d} : completed")
+        
+        if is_completed:
+            syosetu.set_new_word_list([])
+        syosetu.save_if_modified()
+        return is_completed
+
+
+    def translate_batches_request(self, syosetu: Syosetu) -> None:
+        """ request batches of translate process of the syosetu.
+        """
+                
+        episode_id_list = syosetu.get_episode_id_list()
+        
+        for episode_id in episode_id_list:
+            status = syosetu.get_translate_status(episode_id)
+            if status == PROG_STATUS[0]:
+                _translate_batch_request(self.client, syosetu, episode_id)
+                print(
+                    "request trans_" + syosetu.get_syosetu_title() 
+                    + "_" + episode_id
+                )
+            elif status == PROG_STATUS[1]:
+                print(
+                    "processing trans_" + syosetu.get_syosetu_title() 
+                    + "_" + episode_id
+                )
+            elif status == PROG_STATUS[2]:
+                print(
+                    "end trans_" + syosetu.get_syosetu_title() 
+                    + "_" + episode_id
+                )
+        
+        syosetu.save_if_modified()
+        return None
+
+
+    def translate_batches_response(self, syosetu: Syosetu) -> bool:
+        """ retrieve batch responses of translate process of the syosetu.
+        """
+                
+        episode_id_list = syosetu.get_episode_id_list()
+        
+        is_completed = True
+        for episode_id in episode_id_list:
+            if syosetu.get_translate_status(episode_id) == PROG_STATUS[1]:
+                batch_id = syosetu.get_translate_batch_id(episode_id)
+                status = self.client.batch_status(batch_id)
+                if status == "completed":
+                    _translate_batch_response(self.client, syosetu, episode_id, batch_id)
+                    print(
+                        "retrieve trans_" + syosetu.get_syosetu_title() 
+                        + "_" + episode_id
+                    )
+                elif status == "finalizing":
+                    is_completed = False
+                    print(
+                        "finalize trans_" + syosetu.get_syosetu_title() 
+                        + "_" + episode_id
+                    )
+                else:
+                    is_completed = False
+                    self.client.batch_cancel(batch_id)
+                    _translate_batch_request(self.client, syosetu, episode_id)
+                    print(
+                        "re-request trans_" + syosetu.get_syosetu_title() 
+                        + "_" + episode_id
+                    )
+            elif syosetu.get_translate_status(episode_id) == PROG_STATUS[0]:
+                is_completed = False
+                print("request first")
+        
+        if is_completed:
+            syosetu.set_post_translate_status(PROG_STATUS[0])
+        syosetu.save_if_modified()
+        return is_completed
+
+
+    def post_translate_batch_request(self, syosetu: Syosetu) -> None:
+        """ request batches of post-translate process of the syosetu.
+        """
+        
+        episode_id_list = syosetu.get_episode_id_list()
+        for episode_id in episode_id_list:
+            episode_data = syosetu.load_episode_data(
+                lang = syosetu.get_source_lang(),
+                episode_id = episode_id
+            )
+            if episode_data["chapter"] not in syosetu.get_chapter_list():
+                syosetu.append_chapter_list(episode_data["chapter"])
+        
+        if syosetu.get_chapter_list() == [""]:
+            syosetu.set_post_translate_status(PROG_STATUS[2])
+            print(syosetu.get_syosetu_title() + " passed post_trans")
+            return None
+        elif syosetu.get_post_translate_status() == PROG_STATUS[0]:
+            batch_id = self.client.glossary_batch_request(
+                source_lang = syosetu.get_source_lang(),
+                target_lang = syosetu.get_target_lang(),
+                word_list = syosetu.get_chapter_list(),
+                syosetu_title = syosetu.get_syosetu_title(),
+                episode_id = "post_translate"
+            )
+            syosetu.set_post_translate_batch_id(batch_id)
+            syosetu.set_post_translate_status(PROG_STATUS[1])
+            print("request post_trans_" + syosetu.get_syosetu_title())
+        
+        syosetu.save_if_modified()
+        return None
+
+
+    def post_translate_batch_response(self, syosetu: Syosetu) -> bool:
+        """ retrieve batches of post-translate process of the syosetu.
+        """
+        
+        is_completed = False
+        if syosetu.get_post_translate_status() == PROG_STATUS[0]:
+            print("request first")
+            return None
+        elif syosetu.get_post_translate_status() == PROG_STATUS[1]:
+            batch_id = syosetu.get_post_translate_batch_id()
+            status = self.client.batch_status(batch_id)
+            if status == "completed":
+                chapter_list = syosetu.get_chapter_list()
+                translated_chapter_list = self.client.glossary_batch_response(batch_id)
+                chapter_translate_dict = dict(zip(
+                    chapter_list, translated_chapter_list
+                ))
+                
+                episode_id_list = syosetu.get_episode_id_list()
+                for episode_id in episode_id_list:
+                    episode_data = syosetu.load_episode_data(
+                        lang = syosetu.get_target_lang(),
+                        episode_id = episode_id
+                    )
+                    chapter = episode_data["chapter"]
+                    episode_data["chapter"] = chapter_translate_dict[chapter]
+                    syosetu.save_episode_data(
+                        lang = syosetu.get_target_lang(),
+                        episode_id = episode_id,
+                        episode_data = episode_data
+                    )
+                syosetu.set_post_translate_status(PROG_STATUS[2])
+                print("retrieve post_trans_" + syosetu.get_syosetu_title())
+                is_completed = True
+        elif syosetu.get_post_translate_status() == PROG_STATUS[2]:
+            print("end post_trans_" + syosetu.get_syosetu_title())
+            is_completed = True
+        
+        syosetu.save_if_modified()
+        return is_completed
+    
+
+    ###################################################################################################
+    
+    
     def consistancy_batches_request(self, mode: str = "all") -> None:
         """ request batches of consistancy process of all syosetus in syosetu_list.
         """
@@ -792,8 +781,10 @@ class SyosetuMaster():
         else:
             return None
         
+        self.client_open()
         for syosetu in syosetu_list:
-            consistancy_batches_request(syosetu)
+            self.consistancy_batches_request(syosetu)
+        self.client_close()
         return None
     
     
@@ -808,10 +799,11 @@ class SyosetuMaster():
         else:
             return None
         
+        self.client_open()
         is_completed = True
         for syosetu in syosetu_list:
-            temp = consistancy_batches_response(syosetu)
-            is_completed = is_completed and temp
+            is_completed = self.consistancy_batches_response(syosetu) and is_completed
+        self.client_close()
         return is_completed
     
     
@@ -826,8 +818,10 @@ class SyosetuMaster():
         else:
             return None
         
+        self.client_open()
         for syosetu in syosetu_list:
-            glossary_batches_request(syosetu)
+            self.glossary_batches_request(syosetu)
+        self.client_close()
         return None
     
     
@@ -842,10 +836,11 @@ class SyosetuMaster():
         else:
             return None
         
+        self.client_open()
         is_completed = True
         for syosetu in syosetu_list:
-            temp = glossary_batches_response(syosetu)
-            is_completed = is_completed and temp
+            is_completed = self.glossary_batches_response(syosetu) and is_completed
+        self.client_close()
         return is_completed
     
     
@@ -860,8 +855,10 @@ class SyosetuMaster():
         else:
             return None
         
+        self.client_open()
         for syosetu in syosetu_list:
-            translate_batches_request(syosetu)
+            self.translate_batches_request(syosetu)
+        self.client_close()
         return None
     
     
@@ -876,10 +873,11 @@ class SyosetuMaster():
         else:
             return None
         
+        self.client_open()
         is_completed = True
         for syosetu in syosetu_list:
-            temp = translate_batches_response(syosetu)
-            is_completed = is_completed and temp
+            is_completed = self.translate_batches_response(syosetu) and is_completed
+        self.client_close()
         return is_completed
     
     
@@ -894,8 +892,10 @@ class SyosetuMaster():
         else:
             return None
         
+        self.client_open()
         for syosetu in syosetu_list:
-            post_translate_batch_request(syosetu)
+            self.post_translate_batch_request(syosetu)
+        self.client_close()
         return None
     
     
@@ -910,10 +910,11 @@ class SyosetuMaster():
         else:
             return None
         
+        self.client_open()
         is_completed = True
         for syosetu in syosetu_list:
-            temp = post_translate_batch_response(syosetu)
-            is_completed = is_completed and temp
+            is_completed = self.post_translate_batch_response(syosetu) and is_completed
+        self.client_close()
         return is_completed
     
     
