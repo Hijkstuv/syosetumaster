@@ -6,15 +6,22 @@ install with
 pip install syosetumaster
 ```
 
-recommanded import form
+recommanded import form is
 ```
 from syosetumaster import SyosetuMaster as SM
 ```
 
-You should set your openai API key.
+You MUST set your openai API key.
 ```
 SM.set_api_key("YOUR_API_KEY")
 ```
+
+and you can set directories.
+```
+SM.set_base_dir("YOUR_BASE_DIR")      # files of syosetu data will saved at Base_DIR.
+SM.set_batch_dir("YOUR_BATCH_DIR")    # files of batches will saved at BATCH_DIR.
+```
+
 
 First, make SyosetuMaster instance.
 ```
@@ -49,13 +56,13 @@ master.save_syosetu_list()
 master.load_syosetu_list()
 ```
 
-You can select novels that want to treat.
+You can select novels that you want to treat.
 ```
 master.select_syosetu(syosetu)
 master.selected_syosetu_list = LIST_OF_SYOSETU    # this package is not completed, so this way would be more comfortable.
 ```
 
-You can crawl the syosetu with
+You can crawl the syosetu.
 ```
 master.crawl_syosetu(mode = "selected")
 ```
