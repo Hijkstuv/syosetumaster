@@ -75,7 +75,7 @@ Translate workflows contains 3+1 parts
 - glossary process
 - translate process
 - & post-translate process
-These works with
+
 ```
 master.consistancy_batches_request(mode = "selected")
 master.consistancy_batches_response(mode = "selected")
