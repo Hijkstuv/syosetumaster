@@ -37,7 +37,7 @@ master.create_new_syosetu(
 or you can create new Syosetu instances.
 ```
 master.create_new_syosetu_s(
-  LIST_OF_ARGUMENTS    # : list[dict[str, str]], e.g. [{"syosetu_title": "title_1", "syosetu_id": "id_1", ..}, ...]
+  LIST_OF_KWARGS    # : list[dict[str, str]], e.g. [{"syosetu_title": "title_1", "syosetu_id": "id_1", ..}, ...]
 )
 ```
 
