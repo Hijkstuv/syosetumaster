@@ -16,11 +16,7 @@ You MUST set your openai API key.
 SM.set_api_key("YOUR_API_KEY")
 ```
 
-and you can set directories.
-```
-SM.set_base_dir("YOUR_BASE_DIR")      # syosetu data files will saved at Base_DIR.
-SM.set_batch_dir("YOUR_BATCH_DIR")    # batch files will saved at BATCH_DIR.
-```
+Files will be saved at "C:\\syosetu_task\\translate" and "C:\\syosetu_task\\batch".
 
 
 First, make SyosetuMaster instance.
