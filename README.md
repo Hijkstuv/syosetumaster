@@ -1,7 +1,7 @@
 # syosetumaster
-Simple crawling + translating project with syosetuka ni narou
+Simple crawling + translating project with syosetuka ni narou.
 
-install with
+Install with pip :
 ```
 pip install syosetumaster
 ```
