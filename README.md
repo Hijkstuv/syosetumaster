@@ -56,14 +56,12 @@ You can select novels that you want to treat.
 master.select_syosetu(syosetu)
 master.selected_syosetu_list = LIST_OF_SYOSETU    # this package is not completed, so this way would be more comfortable.
 ```
-
+------------------------
 Crawl the syosetu :
 ```
 master.crawl_syosetu(mode = "selected")
 ```
 then all syosetu' in the master.selected_syosetu_list would be crawled.
-
------------------------
 
 Translate workflows contains 3+1 parts
 - consistancy process
