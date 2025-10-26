@@ -11,15 +11,14 @@ recommanded import form is
 from syosetumaster import SyosetuMaster as SM
 ```
 
-You MUST set your openai API key.
+Files will be saved at "C:\\syosetu_task\\translate" and "C:\\syosetu_task\\batch".
+
+You MUST set your openai API key :
 ```
 SM.set_api_key("YOUR_API_KEY")
 ```
 
-Files will be saved at "C:\\syosetu_task\\translate" and "C:\\syosetu_task\\batch".
-
-
-make SyosetuMaster instance.
+make SyosetuMaster instance :
 ```
 master = SM()
 ```
