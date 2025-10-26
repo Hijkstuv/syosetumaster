@@ -83,7 +83,8 @@ master.post_translate_batches_response(mode = "selected")
 ```
 note that response process takes long time. (each batch request takes 1\~5 minutes, and retrieving also takes 1\~2 seconds per batch)
 if ~~~~_response task returns `False`, it means the task has not finished. You should rerun the task.
-Don't worry - retrieved batches are already treated, so only newly completed batches will be retrieved while rerunning.
+Don't worry - retrieved batches are already treated, so only newly completed batches will be retrieved while rerunning.\n
+
 After all, you can export syosetu to txt file:
 ```
 master.export_txt(mode = "selected")
