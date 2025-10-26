@@ -19,12 +19,12 @@ SM.set_api_key("YOUR_API_KEY")
 Files will be saved at "C:\\syosetu_task\\translate" and "C:\\syosetu_task\\batch".
 
 
-First, make SyosetuMaster instance.
+make SyosetuMaster instance.
 ```
 master = SM()
 ```
 
-You can create new Syosetu instance
+Create new Syosetu instance :
 ```
 master.create_new_syosetu(
   syosetu_title = TITLE_OF_THE_SYOSETU    # not important. just for file I/O and classification
@@ -34,19 +34,19 @@ master.create_new_syosetu(
 )
 ```
 
-or you can create new Syosetu instances.
+or Create new Syosetu instances :
 ```
 master.create_new_syosetu_s(
   LIST_OF_KWARGS    # : list[dict[str, str]], e.g. [{"syosetu_title": "title_1", "syosetu_id": "id_1", ..}, ...]
 )
 ```
 
-These are automatically append to .syosetu_list,
+created Syosetu instances are automatically append to .syosetu_list.
 ```
 master.syosetu_list    # -> list[Syosetu]
 ```
 
-and you can save and load this list.
+save and load this list :
 ```
 master.save_syosetu_list()
 master.load_syosetu_list()
@@ -58,13 +58,13 @@ master.select_syosetu(syosetu)
 master.selected_syosetu_list = LIST_OF_SYOSETU    # this package is not completed, so this way would be more comfortable.
 ```
 
-You can crawl the syosetu.
+Crawl the syosetu :
 ```
 master.crawl_syosetu(mode = "selected")
 ```
 then all syosetu' in the master.selected_syosetu_list would be crawled.
 
-!!!
+-----------------------
 
 Translate workflows contains 3+1 parts
 - consistancy process
